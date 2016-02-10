@@ -23,38 +23,48 @@ import com.twitter.sdk.android.core.TwitterSession;
 import com.twitter.sdk.android.core.identity.TwitterLoginButton;
 import com.twitter.sdk.android.core.models.Search;
 
-public class MainActivity extends AppCompatActivity {
+public final class MainActivity extends AppCompatActivity {
 
     private static final String DEFAULT_QUERY = "#India";
 
     private static final String TOKEN_KEY = "token";
     private static final String SECRET_KEY = "token_secret";
 
+    private Toolbar toolbar;
     private RecyclerView tweetList;
     private GridLayoutManager layoutManager;
+    private TweetListAdapter adapter;
     private FloatingActionButton fab;
     private TwitterLoginButton loginButton;
 
     private String accessToken;
     private String accessTokenSecret;
 
-    private SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(this);
+    private SharedPreferences preferences;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
+
+        preferences = PreferenceManager.getDefaultSharedPreferences(this);
+
+        toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
         fab = (FloatingActionButton) findViewById(R.id.fab);
         loginButton = (TwitterLoginButton) findViewById(R.id.login_button);
         tweetList = (RecyclerView) findViewById(R.id.tweets_list);
         layoutManager = new GridLayoutManager(this, 1);
+        adapter = new TweetListAdapter(this);
+        tweetList.setLayoutManager(layoutManager);
+        tweetList.setAdapter(adapter);
+
 
         accessToken = preferences.getString(TOKEN_KEY, null);
         accessTokenSecret = preferences.getString(SECRET_KEY, null);
 
         updateLoginUI();
+
         if (accessToken != null)
             search(DEFAULT_QUERY);
 
@@ -102,14 +112,15 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
-    private void search(String query) {
+    private void search(final String query) {
         TwitterApiClient twitterApiClient = TwitterCore.getInstance().getApiClient();
         twitterApiClient.getSearchService().tweets(query, null, "en", null, "recent", 20,
                 null, 0L, Long.MAX_VALUE, true, new Callback<Search>() {
                     @Override
                     public void success(Result<Search> result) {
-                        Search searchData = result.data;
-                        //TODO update tweet list
+                        adapter.updateQuery(query);
+                        adapter.setTweets(result.data.tweets);
+                        toolbar.setTitle(query);
                     }
 
                     @Override
@@ -144,7 +155,7 @@ public class MainActivity extends AppCompatActivity {
     /**
      * Displays error message in a snack bar
      *
-     * @param error Erro message to show on UI
+     * @param error Error message to show on UI
      */
     private void showError(String error) {
         Snackbar.make(fab, error, Snackbar.LENGTH_SHORT).show();
