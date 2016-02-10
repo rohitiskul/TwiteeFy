@@ -1,5 +1,6 @@
 .gradle
 /local.properties
+fabric.properties
 .DS_Store
 build
 *.iml

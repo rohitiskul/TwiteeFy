@@ -12,6 +12,12 @@
     tools:context="com.rohit.k.twiteefy.MainActivity"
     tools:showIn="@layout/activity_main">
 
+    <com.twitter.sdk.android.core.identity.TwitterLoginButton
+        android:id="@+id/login_button"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerInParent="true" />
+
     <android.support.v7.widget.RecyclerView
         android:id="@+id/tweets_list"
         android:layout_width="match_parent"
