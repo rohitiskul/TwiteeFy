@@ -42,4 +42,7 @@ dependencies {
     compile('com.twitter.sdk.android:twitter:1.12.1@aar') {
         transitive = true;
     }
+    compile('com.github.afollestad.material-dialogs:core:0.8.5.4@aar') {
+        transitive = true
+    }
 }

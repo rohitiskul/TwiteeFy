@@ -11,6 +11,7 @@ import android.support.v7.widget.GridLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
 import android.view.View;
+import android.widget.ProgressBar;
 
 import com.twitter.sdk.android.Twitter;
 import com.twitter.sdk.android.core.Callback;
@@ -35,6 +36,7 @@ public final class MainActivity extends AppCompatActivity {
     private GridLayoutManager layoutManager;
     private TweetListAdapter adapter;
     private FloatingActionButton fab;
+    private ProgressBar progressBar;
     private TwitterLoginButton loginButton;
 
     private String accessToken;
@@ -51,6 +53,7 @@ public final class MainActivity extends AppCompatActivity {
 
         toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
+        progressBar = (ProgressBar) findViewById(R.id.tweets_list_progress);
         fab = (FloatingActionButton) findViewById(R.id.fab);
         loginButton = (TwitterLoginButton) findViewById(R.id.login_button);
         tweetList = (RecyclerView) findViewById(R.id.tweets_list);
@@ -107,17 +110,20 @@ public final class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View view) {
                 //Call search api
+
             }
         });
 
     }
 
     private void search(final String query) {
+        progressBar.setVisibility(View.VISIBLE);
         TwitterApiClient twitterApiClient = TwitterCore.getInstance().getApiClient();
         twitterApiClient.getSearchService().tweets(query, null, "en", null, "recent", 20,
                 null, 0L, Long.MAX_VALUE, true, new Callback<Search>() {
                     @Override
                     public void success(Result<Search> result) {
+                        progressBar.setVisibility(View.GONE);
                         adapter.updateQuery(query);
                         adapter.setTweets(result.data.tweets);
                         toolbar.setTitle(query);
@@ -125,7 +131,8 @@ public final class MainActivity extends AppCompatActivity {
 
                     @Override
                     public void failure(TwitterException e) {
-                        e.getMessage();
+                        progressBar.setVisibility(View.GONE);
+                        showError(e.getMessage());
                     }
                 });
     }
