@@ -1,0 +1,3 @@
+<resources>
+    <integer name="tweet_list_columns">2</integer>
+</resources>

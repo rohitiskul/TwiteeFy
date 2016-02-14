@@ -2,6 +2,7 @@ package com.rohit.k.twiteefy;
 
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.res.Configuration;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.support.design.widget.FloatingActionButton;
@@ -65,7 +66,8 @@ public final class MainActivity extends AppCompatActivity {
         fab = (FloatingActionButton) findViewById(R.id.fab);
         loginButton = (TwitterLoginButton) findViewById(R.id.login_button);
         tweetList = (RecyclerView) findViewById(R.id.tweets_list);
-        layoutManager = new GridLayoutManager(this, 1);
+        int columns = getResources().getInteger(R.integer.tweet_list_columns);
+        layoutManager = new GridLayoutManager(this, columns);
         adapter = new TweetListAdapter(this);
         tweetList.setLayoutManager(layoutManager);
         tweetList.setAdapter(adapter);
@@ -156,9 +158,11 @@ public final class MainActivity extends AppCompatActivity {
             @Override
             public void success(Result<Search> result, boolean isNewQuery) {
                 progressBar.setVisibility(View.GONE);
-                if (isNewQuery)
+                if (isNewQuery) {
+                    scrollToTopBtn.setVisibility(View.GONE);
                     adapter.updateQuery(query, result.data.tweets);
-                else if (result.data.tweets.size() > 0) {
+                    layoutManager.smoothScrollToPosition(tweetList, null, 0);
+                } else if (result.data.tweets.size() > 0) {
                     scrollToTopBtn.setVisibility(View.VISIBLE);
                     adapter.addNext(result.data.tweets);
                 }
@@ -184,6 +188,17 @@ public final class MainActivity extends AppCompatActivity {
     protected void onDestroy() {
         super.onDestroy();
         tweetUpdater.resetUpdater();
+    }
+
+    @Override
+    public void onConfigurationChanged(Configuration newConfig) {
+        super.onConfigurationChanged(newConfig);
+        int columns = getResources().getInteger(R.integer.tweet_list_columns);
+        if (newConfig.orientation == Configuration.ORIENTATION_LANDSCAPE) {
+            layoutManager.setSpanCount(columns);
+        } else {
+            layoutManager.setSpanCount(columns);
+        }
     }
 
     /**

@@ -20,7 +20,6 @@ public final class TweetUpdater {
 
     private Handler updaterHandler;
     private Runnable updater;
-    private TwitterApiClient twitterApiClient;
     private boolean isNewQuery;
     private String query;
     private long sinceId;
@@ -28,7 +27,6 @@ public final class TweetUpdater {
 
 
     public TweetUpdater() {
-        twitterApiClient = TwitterCore.getInstance().getApiClient();
         updaterHandler = new Handler();
         updater = new Runnable() {
             @Override
@@ -47,6 +45,8 @@ public final class TweetUpdater {
     }
 
     private void callSearchAPI() {
+        //Always takes the instance with latest states.
+        final TwitterApiClient twitterApiClient = TwitterCore.getInstance().getApiClient();
         twitterApiClient.getSearchService().tweets(query, null, "en", null, "recent", 20,
                 null, sinceId, Long.MAX_VALUE, true, new Callback<Search>() {
                     @Override

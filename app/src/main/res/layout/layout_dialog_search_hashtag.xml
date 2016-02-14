@@ -8,7 +8,9 @@
         android:id="@+id/dialog_search_edit"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:singleLine="true"
-        android:hint="#India, #twitter etc." />
+        android:layout_marginLeft="10dp"
+        android:layout_marginRight="10dp"
+        android:hint="#India, #twitter etc."
+        android:singleLine="true" />
 
 </LinearLayout>
