@@ -2,9 +2,11 @@ package com.rohit.k.twiteefy;
 
 import android.content.Context;
 import android.graphics.Typeface;
+import android.support.v4.content.ContextCompat;
 import android.support.v7.widget.RecyclerView;
 import android.text.SpannableString;
 import android.text.Spanned;
+import android.text.style.ForegroundColorSpan;
 import android.text.style.StyleSpan;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -87,11 +89,14 @@ public final class TweetListAdapter extends RecyclerView.Adapter<TweetListAdapte
 
     private void applySpan(final SpannableString spStr, int start, int end) {
         spStr.setSpan(new StyleSpan(Typeface.BOLD), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-//        String tag = spStr.subSequence(start, end).toString().toLowerCase();
-////        if (tag.contains(query)) {
-////            int color = ContextCompat.getColor(context, R.color.colorAccent);
-////            spStr.setSpan(new ForegroundColorSpan(color), start, start + query.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-////        }
+        String tag = spStr.subSequence(start, end).toString().toLowerCase();
+        // #Pak#India  #India's  #india
+        if (tag.contains(query)) {
+            int queryStart = tag.indexOf(query);
+            queryStart = queryStart < 0 ? start : (start + queryStart);
+            int color = ContextCompat.getColor(context, R.color.colorAccent);
+            spStr.setSpan(new ForegroundColorSpan(color), queryStart, queryStart + query.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        }
     }
 
     @Override
