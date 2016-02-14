@@ -29,4 +29,19 @@
         android:layout_centerInParent="true"
         android:visibility="gone" />
 
+    <TextView
+        android:id="@+id/new_posts_button"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentTop="true"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="8dp"
+        android:background="@color/colorAccent"
+        android:drawableLeft="@drawable/ic_scroll_to_top"
+        android:drawablePadding="8dp"
+        android:padding="8dp"
+        android:text="New tweets"
+        android:textColor="@android:color/white"
+        android:visibility="gone" />
+
 </RelativeLayout>

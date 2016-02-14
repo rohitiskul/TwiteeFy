@@ -11,14 +11,16 @@ import android.support.v7.widget.GridLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
 import android.view.View;
+import android.widget.EditText;
 import android.widget.ProgressBar;
+import android.widget.TextView;
 
+import com.afollestad.materialdialogs.DialogAction;
+import com.afollestad.materialdialogs.MaterialDialog;
 import com.twitter.sdk.android.Twitter;
 import com.twitter.sdk.android.core.Callback;
 import com.twitter.sdk.android.core.Result;
-import com.twitter.sdk.android.core.TwitterApiClient;
 import com.twitter.sdk.android.core.TwitterAuthToken;
-import com.twitter.sdk.android.core.TwitterCore;
 import com.twitter.sdk.android.core.TwitterException;
 import com.twitter.sdk.android.core.TwitterSession;
 import com.twitter.sdk.android.core.identity.TwitterLoginButton;
@@ -37,10 +39,13 @@ public final class MainActivity extends AppCompatActivity {
     private TweetListAdapter adapter;
     private FloatingActionButton fab;
     private ProgressBar progressBar;
+    private TextView scrollToTopBtn;
     private TwitterLoginButton loginButton;
 
     private String accessToken;
     private String accessTokenSecret;
+
+    private TweetUpdater tweetUpdater;
 
     private SharedPreferences preferences;
 
@@ -49,11 +54,14 @@ public final class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        tweetUpdater = new TweetUpdater();
+
         preferences = PreferenceManager.getDefaultSharedPreferences(this);
 
         toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
         progressBar = (ProgressBar) findViewById(R.id.tweets_list_progress);
+        scrollToTopBtn = (TextView) findViewById(R.id.new_posts_button);
         fab = (FloatingActionButton) findViewById(R.id.fab);
         loginButton = (TwitterLoginButton) findViewById(R.id.login_button);
         tweetList = (RecyclerView) findViewById(R.id.tweets_list);
@@ -110,7 +118,33 @@ public final class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View view) {
                 //Call search api
+                MaterialDialog dialog = new MaterialDialog.Builder(MainActivity.this)
+                        .title("Search Tweets")
+                        .customView(R.layout.layout_dialog_search_hashtag, false)
+                        .positiveText("OK")
+                        .onPositive(new MaterialDialog.SingleButtonCallback() {
+                            @Override
+                            public void onClick(MaterialDialog dialog, DialogAction which) {
+                                View dialogView = dialog.getCustomView();
+                                if (dialogView == null) {
+                                    dialog.dismiss();
+                                    return;
+                                }
+                                final EditText editText = (EditText) dialogView.findViewById(R.id.dialog_search_edit);
+                                dialog.dismiss();
+                                search(editText.getText().toString());
+                            }
+                        })
+                        .build();
+                dialog.show();
+            }
+        });
 
+        scrollToTopBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                scrollToTopBtn.setVisibility(View.GONE);
+                layoutManager.smoothScrollToPosition(tweetList, null, 0);
             }
         });
 
@@ -118,23 +152,25 @@ public final class MainActivity extends AppCompatActivity {
 
     private void search(final String query) {
         progressBar.setVisibility(View.VISIBLE);
-        TwitterApiClient twitterApiClient = TwitterCore.getInstance().getApiClient();
-        twitterApiClient.getSearchService().tweets(query, null, "en", null, "recent", 20,
-                null, 0L, Long.MAX_VALUE, true, new Callback<Search>() {
-                    @Override
-                    public void success(Result<Search> result) {
-                        progressBar.setVisibility(View.GONE);
-                        adapter.updateQuery(query);
-                        adapter.setTweets(result.data.tweets);
-                        toolbar.setTitle(query);
-                    }
+        tweetUpdater.startUpdater(query, new SearchCallback() {
+            @Override
+            public void success(Result<Search> result, boolean isNewQuery) {
+                progressBar.setVisibility(View.GONE);
+                if (isNewQuery)
+                    adapter.updateQuery(query, result.data.tweets);
+                else if (result.data.tweets.size() > 0) {
+                    scrollToTopBtn.setVisibility(View.VISIBLE);
+                    adapter.addNext(result.data.tweets);
+                }
+                toolbar.setTitle(query);
+            }
 
-                    @Override
-                    public void failure(TwitterException e) {
-                        progressBar.setVisibility(View.GONE);
-                        showError(e.getMessage());
-                    }
-                });
+            @Override
+            public void failure(TwitterException e) {
+                progressBar.setVisibility(View.GONE);
+                showError(e.getMessage());
+            }
+        });
     }
 
     @Override
@@ -142,6 +178,12 @@ public final class MainActivity extends AppCompatActivity {
         super.onActivityResult(requestCode, resultCode, data);
         if (loginButton != null)
             loginButton.onActivityResult(requestCode, resultCode, data);
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        tweetUpdater.resetUpdater();
     }
 
     /**

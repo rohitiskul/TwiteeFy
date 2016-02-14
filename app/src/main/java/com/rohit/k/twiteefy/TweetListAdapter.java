@@ -15,6 +15,7 @@ import android.widget.TextView;
 
 import com.twitter.sdk.android.core.models.Tweet;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -25,7 +26,7 @@ public final class TweetListAdapter extends RecyclerView.Adapter<TweetListAdapte
 
     private Context context;
     private LayoutInflater inflater;
-    private List<Tweet> tweetItems;
+    private ArrayList<Tweet> tweetItems;
     private String query;
 
     public TweetListAdapter(final Context context) {
@@ -33,16 +34,20 @@ public final class TweetListAdapter extends RecyclerView.Adapter<TweetListAdapte
         inflater = LayoutInflater.from(context);
     }
 
-    public void updateQuery(final String query) {
+    public void updateQuery(final String query, List<Tweet> tweets) {
         this.query = query.toLowerCase();
+        this.tweetItems = new ArrayList<>(tweets);
+        notifyDataSetChanged();
     }
 
-    public void setTweets(List<Tweet> tweets) {
-        if (this.tweetItems == null)
-            this.tweetItems = tweets;
-        else
-            this.tweetItems.addAll(tweets);
-        notifyDataSetChanged();
+    public void addNext(List<Tweet> tweets) {
+        if (tweetItems == null) {
+            tweetItems = new ArrayList<>();
+            tweetItems.addAll(tweets);
+        } else {
+            tweetItems.addAll(0, tweets);
+        }
+        notifyItemRangeInserted(0, tweets.size());
     }
 
     @Override
