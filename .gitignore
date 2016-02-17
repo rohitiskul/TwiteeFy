@@ -4,7 +4,6 @@ fabric.properties
 .DS_Store
 build
 *.iml
-*.apk
 /.idea
 .thumbnails
 /build
