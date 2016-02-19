@@ -1,8 +1,8 @@
 package com.rohit.k.twiteefy;
 
-import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.res.Configuration;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.support.design.widget.FloatingActionButton;
@@ -12,28 +12,23 @@ import android.support.v7.widget.GridLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
 import android.view.View;
+import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import com.afollestad.materialdialogs.DialogAction;
 import com.afollestad.materialdialogs.MaterialDialog;
-import com.twitter.sdk.android.Twitter;
-import com.twitter.sdk.android.core.Callback;
-import com.twitter.sdk.android.core.Result;
-import com.twitter.sdk.android.core.TwitterAuthToken;
-import com.twitter.sdk.android.core.TwitterException;
-import com.twitter.sdk.android.core.TwitterSession;
-import com.twitter.sdk.android.core.identity.TwitterLoginButton;
-import com.twitter.sdk.android.core.models.Search;
+import com.rohit.k.twiteefy.http.Callback;
+import com.rohit.k.twiteefy.http.OAuth2Async;
+import com.rohit.k.twiteefy.model.Tweet;
+
+import java.util.ArrayList;
 
 public final class MainActivity extends AppCompatActivity {
 
+    public static final String TOKEN_KEY = "token";
     private static final String DEFAULT_QUERY = "#India";
-
-    private static final String TOKEN_KEY = "token";
-    private static final String SECRET_KEY = "token_secret";
-
     private Toolbar toolbar;
     private RecyclerView tweetList;
     private GridLayoutManager layoutManager;
@@ -41,10 +36,9 @@ public final class MainActivity extends AppCompatActivity {
     private FloatingActionButton fab;
     private ProgressBar progressBar;
     private TextView scrollToTopBtn;
-    private TwitterLoginButton loginButton;
+    private Button loginButton;
 
     private String accessToken;
-    private String accessTokenSecret;
 
     private TweetUpdater tweetUpdater;
 
@@ -55,7 +49,7 @@ public final class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        tweetUpdater = new TweetUpdater();
+        tweetUpdater = new TweetUpdater(this);
 
         preferences = PreferenceManager.getDefaultSharedPreferences(this);
 
@@ -64,7 +58,7 @@ public final class MainActivity extends AppCompatActivity {
         progressBar = (ProgressBar) findViewById(R.id.tweets_list_progress);
         scrollToTopBtn = (TextView) findViewById(R.id.new_posts_button);
         fab = (FloatingActionButton) findViewById(R.id.fab);
-        loginButton = (TwitterLoginButton) findViewById(R.id.login_button);
+        loginButton = (Button) findViewById(R.id.login_button_native);
         tweetList = (RecyclerView) findViewById(R.id.tweets_list);
         int columns = getResources().getInteger(R.integer.tweet_list_columns);
         layoutManager = new GridLayoutManager(this, columns);
@@ -74,44 +68,32 @@ public final class MainActivity extends AppCompatActivity {
 
 
         accessToken = preferences.getString(TOKEN_KEY, null);
-        accessTokenSecret = preferences.getString(SECRET_KEY, null);
 
         updateLoginUI();
 
         if (accessToken != null)
             search(DEFAULT_QUERY);
 
-
-        loginButton.setCallback(new Callback<TwitterSession>() {
+        loginButton.setOnClickListener(new View.OnClickListener() {
             @Override
-            public void success(Result<TwitterSession> result) {
-                // Do something with result, which provides a TwitterSession for making API calls
-                TwitterSession session = Twitter.getSessionManager().getActiveSession();
-                if (session == null) {
-                    showError("Authorize failed");
-                    return;
-                }
-                TwitterAuthToken authToken = session.getAuthToken();
-                if (authToken == null) {
-                    showError("Authorize failed");
-                    return;
-                }
-                accessToken = authToken.token;
-                accessTokenSecret = authToken.secret;
+            public void onClick(View view) {
+                new OAuth2Async(MainActivity.this, new Callback<String>() {
+                    @Override
+                    public void onSuccess(String token) {
+                        accessToken = token;
+                        preferences.edit().putString(TOKEN_KEY, accessToken).apply();
 
-                preferences.edit().putString(TOKEN_KEY, accessToken).apply();
-                preferences.edit().putString(SECRET_KEY, accessTokenSecret).apply();
+                        updateLoginUI();
+                        //Default search
+                        search(DEFAULT_QUERY);
+                    }
 
-                updateLoginUI();
-                //Default search
-                search(DEFAULT_QUERY);
-            }
+                    @Override
+                    public void onFailure(String error) {
+                        showError("Authorize failed");
 
-            @Override
-            public void failure(TwitterException exception) {
-                // Do something on failure
-                if (exception.getMessage() != null)
-                    showError(exception.getMessage());
+                    }
+                }).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
             }
         });
 
@@ -156,32 +138,25 @@ public final class MainActivity extends AppCompatActivity {
         progressBar.setVisibility(View.VISIBLE);
         tweetUpdater.startUpdater(query, new SearchCallback() {
             @Override
-            public void success(Result<Search> result, boolean isNewQuery) {
+            public void success(ArrayList<Tweet> result, boolean isNewQuery) {
                 progressBar.setVisibility(View.GONE);
                 if (isNewQuery) {
                     scrollToTopBtn.setVisibility(View.GONE);
-                    adapter.updateQuery(query, result.data.tweets);
+                    adapter.updateQuery(query, result);
                     layoutManager.smoothScrollToPosition(tweetList, null, 0);
-                } else if (result.data.tweets.size() > 0) {
+                } else if (result.size() > 0) {
                     scrollToTopBtn.setVisibility(View.VISIBLE);
-                    adapter.addNext(result.data.tweets);
+                    adapter.addNext(result);
                 }
                 toolbar.setTitle(query);
             }
 
             @Override
-            public void failure(TwitterException e) {
+            public void failure(String error) {
                 progressBar.setVisibility(View.GONE);
-                showError(e.getMessage());
+                showError(error);
             }
         });
-    }
-
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        if (loginButton != null)
-            loginButton.onActivityResult(requestCode, resultCode, data);
     }
 
     @Override

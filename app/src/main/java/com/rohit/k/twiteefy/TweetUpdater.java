@@ -1,14 +1,17 @@
 package com.rohit.k.twiteefy;
 
+import android.app.Activity;
+import android.os.AsyncTask;
 import android.os.Handler;
+import android.preference.PreferenceManager;
 
-import com.twitter.sdk.android.core.Callback;
-import com.twitter.sdk.android.core.Result;
-import com.twitter.sdk.android.core.TwitterApiClient;
-import com.twitter.sdk.android.core.TwitterCore;
-import com.twitter.sdk.android.core.TwitterException;
-import com.twitter.sdk.android.core.models.Search;
-import com.twitter.sdk.android.core.models.Tweet;
+import com.rohit.k.twiteefy.http.Callback;
+import com.rohit.k.twiteefy.http.HttpManager;
+import com.rohit.k.twiteefy.http.SearchTweets;
+import com.rohit.k.twiteefy.model.Tweet;
+
+import java.lang.ref.WeakReference;
+import java.util.ArrayList;
 
 /**
  * To update feeds periodically
@@ -18,6 +21,7 @@ public final class TweetUpdater {
 
     private static final int INTERVAL = 10 * 1000;
 
+    private WeakReference<Activity> activityWeakReference;
     private Handler updaterHandler;
     private Runnable updater;
     private boolean isNewQuery;
@@ -25,8 +29,8 @@ public final class TweetUpdater {
     private long sinceId;
     private SearchCallback callback;
 
-
-    public TweetUpdater() {
+    public TweetUpdater(final Activity activity) {
+        activityWeakReference = new WeakReference<>(activity);
         updaterHandler = new Handler();
         updater = new Runnable() {
             @Override
@@ -46,28 +50,34 @@ public final class TweetUpdater {
 
     private void callSearchAPI() {
         //Always takes the instance with latest states.
-        final TwitterApiClient twitterApiClient = TwitterCore.getInstance().getApiClient();
-        twitterApiClient.getSearchService().tweets(query, null, "en", null, "recent", 20,
-                null, sinceId, Long.MAX_VALUE, true, new Callback<Search>() {
-                    @Override
-                    public void success(Result<Search> result) {
-                        if (result != null && result.data != null && result.data.tweets != null && result.data.tweets.size() > 0) {
-                            Tweet tweet = result.data.tweets.get(0);
-                            sinceId = tweet.id;
-                        }
-                        callback.success(result, isNewQuery);
-                        //Its only refresh tweets after this point, so query will be same afterwards
-                        isNewQuery = false;
-                        updaterHandler.postDelayed(updater, INTERVAL);
-                    }
+        final Activity activity = activityWeakReference.get();
+        if (activity == null)
+            return;
+        final String accessToken = PreferenceManager.getDefaultSharedPreferences(activity).getString(MainActivity.TOKEN_KEY, null);
+        if (accessToken == null) {
+            callback.failure(HttpManager.TOKEN_ERROR);
+            return;
+        }
+        new SearchTweets(activity, accessToken, query, sinceId, new Callback<ArrayList<Tweet>>() {
 
-                    @Override
-                    public void failure(TwitterException e) {
-                        callback.failure(e);
-                        //Updater will stop in case of error
-                        resetUpdater();
-                    }
-                });
+            @Override
+            public void onSuccess(ArrayList<Tweet> result) {
+                if (result.size() > 0) {
+                    sinceId = result.get(0).id;
+                }
+                callback.success(result, isNewQuery);
+                //Its only refresh tweets after this point, so query will be same afterwards
+                isNewQuery = false;
+                updaterHandler.postDelayed(updater, INTERVAL);
+            }
+
+            @Override
+            public void onFailure(String error) {
+                callback.failure(error);
+                //Updater will stop in case of error
+                resetUpdater();
+            }
+        }).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
     }
 
     public void resetUpdater() {

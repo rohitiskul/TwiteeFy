@@ -1,8 +1,8 @@
 package com.rohit.k.twiteefy;
 
-import com.twitter.sdk.android.core.Result;
-import com.twitter.sdk.android.core.TwitterException;
-import com.twitter.sdk.android.core.models.Search;
+import com.rohit.k.twiteefy.model.Tweet;
+
+import java.util.ArrayList;
 
 /**
  * Callback extension for default twitter callback
@@ -10,8 +10,8 @@ import com.twitter.sdk.android.core.models.Search;
  */
 public interface SearchCallback {
 
-    void success(Result<Search> result, boolean isNewQuery);
+    void success(ArrayList<Tweet> result, boolean isNewQuery);
 
-    void failure(TwitterException e);
+    void failure(String e);
 
 }

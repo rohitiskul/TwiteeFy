@@ -13,7 +13,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 
-import com.twitter.sdk.android.core.models.Tweet;
+import com.rohit.k.twiteefy.model.Tweet;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -36,7 +36,7 @@ public final class TweetListAdapter extends RecyclerView.Adapter<TweetListAdapte
 
     public void updateQuery(final String query, List<Tweet> tweets) {
         this.query = query.toLowerCase();
-        this.tweetItems = new ArrayList<>(tweets);
+        this.tweetItems = new ArrayList<Tweet>(tweets);
         notifyDataSetChanged();
     }
 
